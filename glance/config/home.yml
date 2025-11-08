@@ -1,0 +1,117 @@
+- name: Home
+  # Optionally, if you only have a single page you can hide the desktop navigation for a cleaner look
+  # hide-desktop-navigation: true
+  head-widgets:
+    - type: search
+      new-tab: true
+      search-engine: google
+      bangs:
+        - title: YouTube
+          shortcut: "!yt"
+          url: https://www.youtube.com/results?search_query={QUERY}
+        - title: Twitter
+          shortcut: "!x"
+          url: https://x.com/search?q={QUERY}
+  columns:
+    - size: small
+      widgets:
+        - type: calendar
+          first-day-of-week: monday
+        - type: weather
+          location: London, United Kingdom
+          units: metric # alternatively "imperial"
+          hour-format: 24h # alternatively "24h"
+          # Optionally hide the location from being displayed in the widget
+          # hide-location: true
+        - type: twitch-channels
+          channels:
+            - theprimeagen
+            - j_blow
+            - giantwaffle
+            - cohhcarnage
+            - christitustech
+            - EJ_SA
+    - size: full
+      widgets:
+        - type: group
+          widgets:
+            - type: rss
+              title: Tech
+              limit: 10
+              collapse-after: 5
+              cache: 7d
+              feeds:
+                - url: http://news.ycombinator.com/rss
+                - url: https://www.cnbc.com/rss-feeds/
+            - type: lobsters
+            - type: hacker-news
+
+        - type: videos
+          channels:
+            - UCXuqSBlHAE6Xw-yeJA0Tunw # Linus Tech Tips
+            - UCR-DXc1voovS8nhAvccRZhg # Jeff Geerling
+            - UCsBjURrPoezykLs9EqgamOA # Fireship
+            - UCBJycsmduvYEL83R_U4JriQ # Marques Brownlee
+            - UCHnyfMqiRRG1u-2MsSQLbXA # Veritasium
+
+        - type: group
+          widgets:
+            - type: reddit
+              subreddit: technology
+              show-thumbnails: true
+            - type: reddit
+              subreddit: selfhosted
+              show-thumbnails: true
+            - type: reddit
+              subreddit: wallstreetbets
+              show-thumbnails: true
+            - type: reddit
+              subreddit: futurology
+              show-thumbnails: true
+
+    - size: small
+      widgets:
+        - type: rss
+          limit: 10
+          collapse-after: 5
+          cache: 7d
+          feeds:
+            - url: https://selfh.st/rss/
+              title: selfh.st
+            - url: https://rupakghose.substack.com/feed
+            - url: http://ben-evans.com/benedictevans?format=rss
+            - url: http://news.ycombinator.com/rss
+            - url: https://blog.pragmaticengineer.com/rss/
+            - url: http://stratechery.com/feed/
+            - url: https://feeds.content.dowjones.io/public/rss/RSSMarketsMain
+            - url: https://feeds.bloomberg.com/markets/news.rss
+              title: Bloomberg
+
+        - type: markets
+          collapse-after: 5
+          markets:
+            - symbol: SPY
+              name: S&P 500
+              chart-link-template: https://www.tradingview.com/chart/?symbol=SPY
+              symbol-link-template: https://www.yahoofinance.com/search?tbm=nws&q=SPY
+            - symbol: BTC-USD
+              name: Bitcoin
+            - symbol: NVDA
+              name: NVIDIA
+            - symbol: AAPL
+              name: Apple
+            - symbol: MSFT
+              name: Microsoft
+            - symbol: META
+              name: Meta
+
+        - type: releases
+          cache: 1d
+          # Without authentication the Github API allows for up to 60 requests per hour. You can create a
+          # read-only token from your Github account settings and use it here to increase the limit.
+          # token: ...
+          repositories:
+            - glanceapp/glance
+            - go-gitea/gitea
+            - immich-app/immich
+            - syncthing/syncthing
