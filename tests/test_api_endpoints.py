@@ -151,7 +151,7 @@ def test_shutdown_endpoint_accepts_authorization_header_formats(client, mock_tok
         ("linux-ubuntu", "sudo shutdown -h now"),
         ("wsl", "sudo shutdown -h now"),
         ("darwin", "sudo shutdown -h now"),
-        ("windows", "shutdown /s /t 0"),
+        ("windows", "shutdown /s /f /t 0"),
     ],
 )
 def test_shutdown_endpoint_invokes_platform_specific_command(client, mock_token_env, mock_platform_detection, mock_subprocess, platform_id, expected_command):
@@ -173,7 +173,7 @@ def test_shutdown_endpoint_invokes_platform_specific_command(client, mock_token_
         ("linux-ubuntu", "shutdown -r now"),
         ("wsl", "shutdown -r now"),
         ("darwin", "shutdown -r now"),
-        ("windows", "shutdown /r /t 0"),
+        ("windows", "shutdown /r /f /t 0"),
     ],
 )
 def test_restart_endpoint_invokes_platform_specific_command(client, mock_token_env, mock_platform_detection, mock_subprocess, platform_id, expected_command):

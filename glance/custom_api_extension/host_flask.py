@@ -4,24 +4,26 @@ This module provides authenticated endpoints for shutting down and restarting
 the host system. It includes CORS support, rate limiting, and logging.
 """
 
-import os
-import sys
 import logging
+import os
 import re
+import sys
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_cors import CORS
 
-# Allow running this file directly
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from glance.custom_api_extension.flask_utils import detect_platform, run_command
+try:
+    from glance.custom_api_extension.flask_utils import detect_platform, run_command
+except ImportError:  # pragma: no cover
+    # Fallback for running this file directly without installing the package.
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, PROJECT_ROOT)
+    from glance.custom_api_extension.flask_utils import detect_platform, run_command
 
 
 # ============================================================================
