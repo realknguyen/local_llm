@@ -176,7 +176,8 @@ def _get_shutdown_command(platform_id):
     if platform_id in ('linux', 'wsl', 'darwin') or platform_id.startswith('linux'):
         return 'sudo shutdown -h now'
     elif platform_id == 'windows':
-        return 'shutdown /s /t 0'
+        # /s = shutdown, /f = force close apps, /t 0 = immediate
+        return 'shutdown /s /f /t 0'
     return None
 
 
@@ -192,7 +193,8 @@ def _get_restart_command(platform_id):
     if platform_id in ('linux', 'wsl', 'darwin') or platform_id.startswith('linux'):
         return 'shutdown -r now'
     elif platform_id == 'windows':
-        return 'shutdown /r /t 0'
+        # /r = restart, /f = force close apps, /t 0 = immediate
+        return 'shutdown /r /f /t 0'
     return None
 
 
