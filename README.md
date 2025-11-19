@@ -84,6 +84,11 @@ local_llm/
    - Recreates the Docker Compose stack, automatically layering in `docker-compose.gpu.yml` when `docker info` reports an NVIDIA runtime.
    - Boots the Flask API (`glance/custom_api_extension/host_flask.py`) once containers are healthy.
 
+   The script now creates/uses a project-local virtual environment (`.venv` by default) so dependency installs never touch the system Python that Debian/Ubuntu marks as "externally managed" (PEP 668). Customize the location or disable this behavior via `[tool.manage_stack] use_virtualenv` / `virtualenv_path` in `project.toml`.
+
+   > **WSL tip:** Ubuntu images sometimes ship without `pip`/`ensurepip`. If the script fails during the bootstrap step, run `sudo apt-get update && sudo apt-get install python3-pip python3-venv` and rerun `python manage_stack.py`.
+   > :warning: Avoid `sudo python manage_stack.py` or the `.venv` directory will be owned by root and unusable from your normal user.
+
 4. **Prefer manual control?** (optional)
 
    ```bash
@@ -126,9 +131,11 @@ base_compose_file = "docker-compose.yml"
 gpu_compose_file = "docker-compose.gpu.yml"
 optional_dependency_groups = ["dev"]
 auto_install_dependencies = true
+use_virtualenv = true
+virtualenv_path = ".venv"
 ```
 
-Set `auto_install_dependencies = false` to skip the pip step, or adjust `optional_dependency_groups` if you only want a subset of optional extras.
+Set `auto_install_dependencies = false` to skip the pip step, change `optional_dependency_groups` if you only want a subset of extras, or point `virtualenv_path` somewhere else (or set `use_virtualenv = false`) if you prefer to manage environments yourself.
 
 ---
 

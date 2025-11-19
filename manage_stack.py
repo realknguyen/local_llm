@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -40,6 +41,18 @@ OPTIONAL_DEP_GROUPS: List[str] = MANAGE_STACK_SETTINGS.get(
 AUTO_INSTALL_DEPENDENCIES: bool = MANAGE_STACK_SETTINGS.get(
     "auto_install_dependencies", True
 )
+USE_VIRTUALENV: bool = MANAGE_STACK_SETTINGS.get("use_virtualenv", True)
+
+
+def resolve_virtualenv_path() -> Path:
+    configured_path = MANAGE_STACK_SETTINGS.get("virtualenv_path", ".venv")
+    path_obj = Path(configured_path).expanduser()
+    if not path_obj.is_absolute():
+        path_obj = PROJECT_ROOT / path_obj
+    return path_obj
+
+
+VIRTUALENV_PATH = resolve_virtualenv_path()
 
 
 def run_with_output(command: list[str], description: str) -> None:
@@ -50,6 +63,50 @@ def run_with_output(command: list[str], description: str) -> None:
         raise RuntimeError(
             f"Command {' '.join(command)} failed with exit code {result.returncode}"
         )
+
+
+def _virtualenv_python_candidates() -> list[Path]:
+    """Return ordered list of python executables inside the venv."""
+    if os.name == "nt":
+        return [VIRTUALENV_PATH / "Scripts" / "python.exe"]
+    bin_dir = VIRTUALENV_PATH / "bin"
+    return [bin_dir / "python3", bin_dir / "python"]
+
+
+def locate_virtualenv_python() -> Path:
+    for candidate in _virtualenv_python_candidates():
+        if candidate.exists():
+            return candidate
+    # Default to the first candidate even if it doesn't exist yet.
+    return _virtualenv_python_candidates()[0]
+
+
+def create_virtualenv() -> None:
+    base_python = sys.executable or shutil.which("python3") or "python3"
+    VIRTUALENV_PATH.parent.mkdir(parents=True, exist_ok=True)
+    run_with_output(
+        [base_python, "-m", "venv", str(VIRTUALENV_PATH)],
+        f"Creating virtual environment at {VIRTUALENV_PATH}",
+    )
+
+
+def ensure_virtualenv_python() -> Path:
+    python_path = locate_virtualenv_python()
+    if python_path.exists():
+        return python_path
+    create_virtualenv()
+    python_path = locate_virtualenv_python()
+    if not python_path.exists():
+        raise RuntimeError(
+            f"Unable to find python executable inside virtualenv at {VIRTUALENV_PATH}"
+        )
+    return python_path
+
+
+def resolve_python_interpreter() -> str:
+    if not USE_VIRTUALENV:
+        return sys.executable or shutil.which("python3") or "python3"
+    return str(ensure_virtualenv_python())
 
 
 def compose_is_running(include_gpu_override: bool) -> bool:
@@ -75,9 +132,8 @@ def ensure_flask_entrypoint() -> None:
         )
 
 
-def start_flask_server() -> None:
+def start_flask_server(python_executable: str) -> None:
     ensure_flask_entrypoint()
-    python_executable = sys.executable or "python3"
     run_with_output(
         [python_executable, str(FLASK_ENTRYPOINT)],
         "Starting Flask server",
@@ -117,14 +173,13 @@ def collect_project_dependencies() -> list[str]:
     return ordered
 
 
-def install_python_dependencies() -> None:
+def install_python_dependencies(python_executable: str) -> None:
     if not AUTO_INSTALL_DEPENDENCIES:
         print("Dependency auto-install disabled via project.toml.")
         return
     packages = collect_project_dependencies()
     if not packages:
         return
-    python_executable = sys.executable or "python3"
     ensure_pip_installed(python_executable)
     cmd = [python_executable, "-m", "pip", "install", *packages]
     run_with_output(cmd, "Installing Python dependencies from project.toml")
@@ -141,10 +196,17 @@ def ensure_pip_installed(python_executable: str) -> None:
     if check.returncode == 0:
         return
     print("pip not found for current interpreter; attempting ensurepip bootstrap.")
-    run_with_output(
-        [python_executable, "-m", "ensurepip", "--upgrade"],
-        "Bootstrapping pip via ensurepip",
-    )
+    try:
+        run_with_output(
+            [python_executable, "-m", "ensurepip", "--upgrade"],
+            "Bootstrapping pip via ensurepip",
+        )
+    except RuntimeError as err:
+        raise RuntimeError(
+            "Unable to bootstrap pip automatically. On Debian/Ubuntu/WSL run "
+            "`sudo apt-get update && sudo apt-get install python3-pip python3-venv`, "
+            "or disable dependency auto-installation via `[tool.manage_stack]`."
+        ) from err
     post_check = subprocess.run(
         [python_executable, "-m", "pip", "--version"],
         cwd=PROJECT_ROOT,
@@ -196,9 +258,10 @@ def should_use_gpu_override() -> bool:
 
 
 def main() -> None:
+    python_executable = resolve_python_interpreter()
     use_gpu_override = should_use_gpu_override()
     try:
-        install_python_dependencies()
+        install_python_dependencies(python_executable)
     except RuntimeError as err:
         print(err, file=sys.stderr)
         sys.exit(1)
@@ -228,7 +291,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        start_flask_server()
+        start_flask_server(python_executable)
     except (RuntimeError, FileNotFoundError) as err:
         print(err, file=sys.stderr)
         sys.exit(1)
