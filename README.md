@@ -6,24 +6,24 @@ This repository contains everything needed to stand up a privacy-friendly home l
 
 ## At a Glance
 
-| Component | Location | Purpose |
-| --------- | -------- | ------- |
-| Docker stack | `docker-compose.yml` | Boots Ollama (models), Open WebUI (chat UI), Glance (dashboard), and SearxNG (meta search). |
-| Dashboard config | `glance/config`, `glance/assets` | Home page layouts, widgets, and CSS overrides for Glance. |
-| Custom API extension | `glance/custom_api_extension` | Flask service that Glance calls to restart or power down the host with per-platform commands and rate limiting. |
-| Persistent data | `data/` | Docker bind mounts for Ollama models, Open WebUI, and SearxNG. Ignored from Git to keep the repo lean. |
-| Automated tests | `tests/` | Pytest suite validating every Flask endpoint, the token guard, rate limiting, and OS detection helpers. |
+| Component            | Location                         | Purpose                                                                                                         |
+| -------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Docker stack         | `docker-compose.yml`             | Boots Ollama (models), Open WebUI (chat UI), Glance (dashboard), and SearxNG (meta search).                     |
+| Dashboard config     | `glance/config`, `glance/assets` | Home page layouts, widgets, and CSS overrides for Glance.                                                       |
+| Custom API extension | `glance/custom_api_extension`    | Flask service that Glance calls to restart or power down the host with per-platform commands and rate limiting. |
+| Persistent data      | `data/`                          | Docker bind mounts for Ollama models, Open WebUI, and SearxNG. Ignored from Git to keep the repo lean.          |
+| Automated tests      | `tests/`                         | Pytest suite validating every Flask endpoint, the token guard, rate limiting, and OS detection helpers.         |
 
 ---
 
 ## Requirements
 
-| Category | Details |
-| -------- | ------- |
-| Host OS | Linux or Windows with WSL2 (compose file is tuned for WSL GPU passthrough). |
-| Containers | Docker 24+ and Docker Compose plugin. NVIDIA Container Toolkit if you want GPU acceleration. |
-| Python tooling | Python 3.11+ plus `pip` for running/tests of the Flask extension. |
-| Secrets | `.env` file defining at least `MY_SECRET_TOKEN` (shared between Glance and the Flask app) and `MY_PASSWORD` (hashed password for the Glance UI). |
+| Category       | Details                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Host OS        | Linux or Windows with WSL2 (compose file is tuned for WSL GPU passthrough).                                                                      |
+| Containers     | Docker 24+ and Docker Compose plugin. NVIDIA Container Toolkit if you want GPU acceleration.                                                     |
+| Python tooling | Python 3.11+ plus `pip` for running/tests of the Flask extension.                                                                                |
+| Secrets        | `.env` file defining at least `MY_SECRET_TOKEN` (shared between Glance and the Flask app) and `MY_PASSWORD` (hashed password for the Glance UI). |
 
 Optional but recommended: `just` or `make` for custom scripts, and a virtual environment manager such as `uv`, `pyenv`, or `rye`.
 
@@ -78,6 +78,7 @@ local_llm/
    ```
 
    Each run:
+
    - Installs Python dependencies from `project.toml` (core + optional groups listed under `[tool.manage_stack.optional_dependency_groups]`).
    - Bootstraps `pip` automatically with `ensurepip` if your Python interpreter was installed without it.
    - Verifies `.env` exists before touching Docker.
@@ -103,12 +104,12 @@ local_llm/
    docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
    ```
 
-   | Service | URL | Notes |
-   | ------- | --- | ----- |
-   | Ollama | `http://localhost:11434` | Model runtime and embedding server. |
-   | Open WebUI | `http://localhost:8081` | Web UI proxied to Ollama, RAG enabled via FAISS. |
-   | Glance | `http://localhost:8080` | Dashboard configured by `glance/config`. |
-   | SearxNG | `http://localhost:8082` | Self-hosted metasearch for RAG or manual queries. |
+   | Service    | URL                      | Notes                                             |
+   | ---------- | ------------------------ | ------------------------------------------------- |
+   | Ollama     | `http://localhost:11434` | Model runtime and embedding server.               |
+   | Open WebUI | `http://localhost:8081`  | Web UI proxied to Ollama, RAG enabled via FAISS.  |
+   | Glance     | `http://localhost:8090`  | Dashboard configured by `glance/config`.          |
+   | SearxNG    | `http://localhost:8082`  | Self-hosted metasearch for RAG or manual queries. |
 
    Health checks on Ollama gate Open WebUI startup. GPU passthrough is now opt-in via `docker-compose.gpu.yml`; include it only if your host exposes NVIDIA runtimes.
 
@@ -136,6 +137,47 @@ virtualenv_path = ".venv"
 ```
 
 Set `auto_install_dependencies = false` to skip the pip step, change `optional_dependency_groups` if you only want a subset of extras, or point `virtualenv_path` somewhere else (or set `use_virtualenv = false`) if you prefer to manage environments yourself.
+
+### Command-Line Arguments
+
+```bash
+# Normal full restart
+python manage_stack.py
+
+# Skip dependency installation for faster restarts
+python manage_stack.py --skip-deps
+
+# Skip 'docker compose down' to preserve container state
+python manage_stack.py --restart-only
+
+# Force clean shutdown (stops containers with all compose file combinations)
+python manage_stack.py --clean-shutdown
+
+# View all options
+python manage_stack.py --help
+```
+
+### Windows Startup Script
+
+For Windows users, `start_services.ps1` is provided for use with Task Scheduler to auto-start services on boot:
+
+```powershell
+# Run manually
+.\start_services.ps1
+
+# Add to Task Scheduler
+# Action: Start a program
+# Program: powershell.exe
+# Arguments: -ExecutionPolicy Bypass -File "C:\path\to\home_server\start_services.ps1"
+# Start in: C:\path\to\home_server
+```
+
+The script automatically:
+
+- Starts the Docker Compose stack
+- Installs Python dependencies from `pyproject.toml`
+- Launches the Flask API server
+- Logs all output to `flask_service.log` for troubleshooting
 
 ---
 
@@ -166,16 +208,16 @@ Located in `glance/custom_api_extension`, this mini-service exposes authenticate
    python glance/custom_api_extension/host_flask.py
    ```
 
-* Rate limiting: default limit is `5 per minute` per IP enforced by `flask-limiter`.
-* Auth: `token_required` accepts `Authorization: Bearer <token>`, `Authorization: <token>`, `token` form fields, or `?token=` query params.
+- Rate limiting: default limit is `5 per minute` per IP enforced by `flask-limiter`.
+- Auth: `token_required` accepts `Authorization: Bearer <token>`, `Authorization: <token>`, `token` form fields, or `?token=` query params.
 
 ### Endpoints
 
-| Route | Method | Description | Platform-specific behavior |
-| ----- | ------ | ----------- | -------------------------- |
-| `/` | GET | Health check returning `Hello, World!`. Protected by the rate limiter. | – |
-| `/shutdown` | POST | Issues `sudo shutdown -h now`, `shutdown /s /t 0`, or equivalent depending on OS. | Linux/WSL/macOS use `sudo shutdown -h now`; Windows uses `shutdown /s /t 0`; unsupported platforms return HTTP 400. |
-| `/restart` | POST | Issues safe restart command for the active platform. | Linux/WSL/macOS use `shutdown -r now`; Windows uses `shutdown /r /t 0`. |
+| Route       | Method | Description                                                                       | Platform-specific behavior                                                                                          |
+| ----------- | ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `/`         | GET    | Health check returning `Hello, World!`. Protected by the rate limiter.            | –                                                                                                                   |
+| `/shutdown` | POST   | Issues `sudo shutdown -h now`, `shutdown /s /t 0`, or equivalent depending on OS. | Linux/WSL/macOS use `sudo shutdown -h now`; Windows uses `shutdown /s /t 0`; unsupported platforms return HTTP 400. |
+| `/restart`  | POST   | Issues safe restart command for the active platform.                              | Linux/WSL/macOS use `shutdown -r now`; Windows uses `shutdown /r /t 0`.                                             |
 
 Commands are executed via `run_command()` which captures output and surfaces failures with HTTP 500 responses plus stderr payloads. Platform detection logic leans on `platform`, `distro.id`, and heuristics for WSL to keep commands accurate.
 
@@ -183,15 +225,15 @@ Commands are executed via `run_command()` which captures output and surfaces fai
 
 ## Configuration Reference
 
-| File/Dir | Purpose |
-| -------- | ------- |
-| `glance/config/glance.yml` | Registers pages, auth strategy, and proxies dashboard env vars from `.env`. |
+| File/Dir                                   | Purpose                                                                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `glance/config/glance.yml`                 | Registers pages, auth strategy, and proxies dashboard env vars from `.env`.                                         |
 | `glance/config/home.yml` / `startpage.yml` | Widget layout, RSS feeds, weather, markets, Twitch, and utility groups. Use them as templates for additional pages. |
-| `glance/assets/user.css` | Brand the dashboard. Clear your browser cache (Ctrl+F5) after editing due to caching. |
-| `config/searxng-config` | Passed-through config directory for SearxNG container. |
-| `data/<service>` | Docker bind mounts that retain models, indexes, and user data between restarts. |
-| `docker-compose.gpu.yml` | NVIDIA device reservations layered on top of `docker-compose.yml` when GPU acceleration is available. |
-| `manage_stack.py` | Automation entry point that installs deps, restarts Compose, and launches the Flask API. |
+| `glance/assets/user.css`                   | Brand the dashboard. Clear your browser cache (Ctrl+F5) after editing due to caching.                               |
+| `config/searxng-config`                    | Passed-through config directory for SearxNG container.                                                              |
+| `data/<service>`                           | Docker bind mounts that retain models, indexes, and user data between restarts.                                     |
+| `docker-compose.gpu.yml`                   | NVIDIA device reservations layered on top of `docker-compose.yml` when GPU acceleration is available.               |
+| `manage_stack.py`                          | Automation entry point that installs deps, restarts Compose, and launches the Flask API.                            |
 
 Feel free to add more compose services (e.g., `qdrant`, `postgres`) – just extend `docker-compose.yml` and Glance labels for discovery.
 
@@ -199,9 +241,9 @@ Feel free to add more compose services (e.g., `qdrant`, `postgres`) – just ext
 
 ## Testing & Quality
 
-* **Unit tests**: Run `pytest` from the repo root. The suite (36 tests) covers endpoint auth flows, rate limiting, platform branching, and subprocess error handling.
-* **Formatting**: `black` keeps code style consistent (`black .`).
-* **Linting**: `ruff` (optional) catches import order and logical issues early (`ruff check .`).
+- **Unit tests**: Run `pytest` from the repo root. The suite (36 tests) covers endpoint auth flows, rate limiting, platform branching, and subprocess error handling.
+- **Formatting**: `black` keeps code style consistent (`black .`).
+- **Linting**: `ruff` (optional) catches import order and logical issues early (`ruff check .`).
 
 CI is not bundled, but the commands above are what the project expects before pushing changes.
 
@@ -209,12 +251,12 @@ CI is not bundled, but the commands above are what the project expects before pu
 
 ## Maintenance & Troubleshooting
 
-| Issue | Fix |
-| ----- | --- |
-| Rate limiter blocking tests | The default pytest client fixture disables the limiter; toggle `app.config['RATELIMIT_ENABLED'] = True` inside a test to cover limiter behavior (see `tests/test_api_endpoints.py:test_index_rate_limiting_enforced`). |
-| Permission errors on shutdown/restart | Ensure the user that runs the Flask API has sudo rights without a password prompt or adjust `run_command` to call privileged helper scripts. |
-| GPU not visible inside Ollama container | Install the NVIDIA Container Toolkit, verify `docker info | grep -i nvidia`, then either run `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d` or rerun `python manage_stack.py` so the GPU overrides are applied. |
-| Glance auth failing | Regenerate `MY_PASSWORD` hash with Werkzeug and keep `MY_SECRET_TOKEN` identical across `.env` and any widgets hitting the Flask API. |
+| Issue                                   | Fix                                                                                                                                                                                                                    |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rate limiter blocking tests             | The default pytest client fixture disables the limiter; toggle `app.config['RATELIMIT_ENABLED'] = True` inside a test to cover limiter behavior (see `tests/test_api_endpoints.py:test_index_rate_limiting_enforced`). |
+| Permission errors on shutdown/restart   | Ensure the user that runs the Flask API has sudo rights without a password prompt or adjust `run_command` to call privileged helper scripts.                                                                           |
+| GPU not visible inside Ollama container | Install the NVIDIA Container Toolkit, verify `docker info                                                                                                                                                              | grep -i nvidia`, then either run `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d`or rerun`python manage_stack.py` so the GPU overrides are applied. |
+| Glance auth failing                     | Regenerate `MY_PASSWORD` hash with Werkzeug and keep `MY_SECRET_TOKEN` identical across `.env` and any widgets hitting the Flask API.                                                                                  |
 
 ---
 

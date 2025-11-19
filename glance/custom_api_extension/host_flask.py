@@ -16,7 +16,23 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+
+# Enable CORS with Private Network Access support for Chrome
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Access-Control-Allow-Private-Network"],
+        "supports_credentials": False
+    }
+})
+
+# Add Private Network Access header to all responses
+@app.after_request
+def add_private_network_header(response):
+    response.headers['Access-Control-Allow-Private-Network'] = 'true'
+    return response
+
 limiter = Limiter(
     get_remote_address,
     app=app,

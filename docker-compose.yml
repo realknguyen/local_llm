@@ -83,7 +83,7 @@ services:
     labels:
       glance.name: Glance
       glance.icon: sh:glance
-      glance.url: http://localhost:8080
+      glance.url: http://localhost:8090
       glance.description: Home Dashboard
   # local_api:
   #   container_name: glance-local-api

@@ -1,6 +1,7 @@
 flask==3.0.3
 distro
 flask_limiter
+flask_cors
 websocket
 rel
 pytest
