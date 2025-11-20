@@ -22,6 +22,26 @@ Self-hosted home lab for private LLM chat/search with a Glance dashboard and a s
 
 - GPU tuning and model tables: `docs/gpu-optimization.md`
 - Windows autostart (Task Scheduler + PowerShell): `docs/windows-autostart.md`
+- High-volume WebSocket server reference: `docs/websocket_implementation_guide.md`
+
+---
+
+## High-Volume WebSocket Pattern
+
+Need to fan out more than 500 concurrent subscriptions (for example, market data streams) without starving the rest of the stack? Start with the asynchronous pattern captured in `docs/websocket_implementation_guide.md` and layer it into your own service.
+
+**Core architecture**
+- `asyncio` + `websockets` server that registers clients, tracks subscriptions in a `defaultdict(set)`, and keeps per-client background tasks for message handling.
+- Subscription-aware broadcaster that routes market updates to either the full client set or the narrow exchange/symbol audience.
+- Background data processor (async task or external producer) pushing real-time payloads into the broadcaster while the main event loop services heartbeats.
+
+**Operational guidance**
+- Tune `ping_interval`, `ping_timeout`, `close_timeout`, and `max_size` when calling `websockets.serve` to keep latencies predictable under load; increase `read_limit`/`write_limit` for very chatty feeds.
+- Monitor memory by pruning dead sockets and canceling long-running tasks whenever clients disconnect; batch sends with `asyncio.gather` to avoid head-of-line blocking.
+- Back the service with system-level limits (`ulimit -n 65536`), TLS, and authentication, plus deployment runners such as Uvicorn/FastAPI or a load balancer when you need horizontal scale.
+
+**Background service hook**
+Use the `--background` flag pattern from the guide to fork a child process, persist its PID, and keep the WebSocket pump alive outside terminal sessions. Instrument both the parent and child paths so `manage_stack.py` (or your supervisor) can detect failures and restart the feed automatically.
 
 ---
 
