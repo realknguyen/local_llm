@@ -75,11 +75,7 @@ def run_command(command: str) -> Tuple[str, int]:
     """
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            check=True,
-            capture_output=True,
-            text=True
+            command, shell=True, check=True, capture_output=True, text=True
         )
         return result.stdout, result.returncode
 

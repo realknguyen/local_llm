@@ -6,6 +6,8 @@
 .env.*.backup
 !.env.example
 .rooignore
+AGENTS.md
+GEMINI.md
 
 # ---------------------------------------------------------------------------
 # Python build artifacts

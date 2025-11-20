@@ -28,9 +28,7 @@ def load_project_metadata() -> Dict[str, Any]:
 
 
 PROJECT_METADATA = load_project_metadata()
-MANAGE_STACK_SETTINGS = (
-    (PROJECT_METADATA.get("tool") or {}).get("manage_stack") or {}
-)
+MANAGE_STACK_SETTINGS = (PROJECT_METADATA.get("tool") or {}).get("manage_stack") or {}
 BASE_COMPOSE_FILE = PROJECT_ROOT / MANAGE_STACK_SETTINGS.get(
     "base_compose_file", "docker-compose.yml"
 )
@@ -253,7 +251,9 @@ def gpu_runtime_available() -> bool:
     return shutil.which("nvidia-smi") is not None
 
 
-def build_compose_command(extra_args: list[str], include_gpu_override: bool) -> list[str]:
+def build_compose_command(
+    extra_args: list[str], include_gpu_override: bool
+) -> list[str]:
     """Construct the docker compose CLI invocation with optional GPU overrides."""
     files = [BASE_COMPOSE_FILE]
     if include_gpu_override and GPU_COMPOSE_FILE.exists():
