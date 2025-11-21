@@ -190,9 +190,11 @@ def test_shutdown_endpoint_invokes_platform_specific_command(
     response = client.post("/shutdown", headers={"Authorization": "Bearer test_token"})
     assert response.status_code == 200
 
-    mock_subprocess.assert_called_once()
-    called_command = mock_subprocess.call_args.args[0]
-    assert called_command == expected_command
+    assert mock_subprocess.call_count == 2
+    first_call = mock_subprocess.call_args_list[0].args[0]
+    second_call = mock_subprocess.call_args_list[1].args[0]
+    assert first_call == "docker compose down"
+    assert second_call == expected_command
 
 
 @pytest.mark.parametrize(
@@ -219,6 +221,8 @@ def test_restart_endpoint_invokes_platform_specific_command(
     response = client.post("/restart", headers={"Authorization": "Bearer test_token"})
     assert response.status_code == 200
 
-    mock_subprocess.assert_called_once()
-    called_command = mock_subprocess.call_args.args[0]
-    assert called_command == expected_command
+    assert mock_subprocess.call_count == 2
+    first_call = mock_subprocess.call_args_list[0].args[0]
+    second_call = mock_subprocess.call_args_list[1].args[0]
+    assert first_call == "docker compose down"
+    assert second_call == expected_command
